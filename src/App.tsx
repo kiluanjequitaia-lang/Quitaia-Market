@@ -181,7 +181,10 @@ export default function App() {
     if(imageFailures) {
      if(uploadedPaths.length) await supabase.storage.from('product-images').remove(uploadedPaths);
      setNotice((wasEditing?'Dados do anúncio actualizados, mas as fotografias anteriores foram mantidas. ':'Anúncio criado sem alterar nenhuma galeria existente. ') + imageFailures + ' fotografia(s) não puderam ser preparadas ou enviadas. Tenta novamente.');
-     if(!wasEditing) await setProductStatus({id:productId,seller_id:session.user.id} as Product,'paused');
+     if(!wasEditing) {
+      await supabase.from('products').update({status:'paused'}).eq('id',productId).eq('seller_id',session.user.id);
+      setEditingProductId(productId);
+     }
      await loadPublicData();
      await loadMine();
      return;
@@ -203,6 +206,12 @@ export default function App() {
        await supabase.from('product_images').insert(restoreRows);
       }
       if(uploadedPaths.length) await supabase.storage.from('product-images').remove(uploadedPaths);
+      if(!wasEditing) {
+       await supabase.from('products').update({status:'paused'}).eq('id',productId).eq('seller_id',session.user.id);
+       setEditingProductId(productId);
+      }
+      await loadPublicData();
+      await loadMine();
       setNotice('Não foi possível guardar a nova galeria. A operação foi revertida: '+imageError.message);
       return;
      }
