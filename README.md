@@ -18,7 +18,7 @@ Marketplace mobile-first para Angola, em português de Angola, com preços em Kz
 ## Desenvolvimento local
 
 1. Instale Node.js LTS.
-2. Execute `npm install`.
+2. Execute `npm ci` (uses the committed lockfile).
 3. Copie `.env.example` para `.env.local` e configure `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` de um projecto Supabase dedicado ao Quitaia Market.
 4. Aplique, por ordem, os ficheiros SQL em `supabase/migrations/` no Supabase desse projecto.
 5. Execute `npm run dev`.
