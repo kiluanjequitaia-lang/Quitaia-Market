@@ -18,6 +18,10 @@ jobs:
           node-version: 22
       - name: Install dependencies
         run: npm install --package-lock-only && npm ci
+      - name: Dependency audit summary
+        run: |
+          npm audit --json > /tmp/npm-audit.json || true
+          node -e "const a=require('/tmp/npm-audit.json'); for (const [name,v] of Object.entries(a.vulnerabilities||{})) console.log(name + ': ' + v.severity + '; range=' + v.range + '; fix=' + JSON.stringify(v.fixAvailable))"
       - name: TypeScript validation
         run: npm run typecheck
       - name: Unit tests
