@@ -17,7 +17,7 @@ jobs:
         with:
           node-version: 22
       - name: Install dependencies
-        run: npm install
+        run: npm install --package-lock-only && npm ci
       - name: TypeScript validation
         run: npm run typecheck
       - name: Production build
