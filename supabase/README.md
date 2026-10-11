@@ -19,7 +19,7 @@ Use a dedicated Supabase project for this marketplace. Do not reuse the database
 
 ## Storage and RLS
 
-- Bucket `product-images` is public for active ad photos, with a 5 MiB upload limit and image MIME types.
+- Bucket `product-images` is private, with a 5 MiB upload limit and image MIME types. The frontend requests short-lived signed URLs for active ad photos.
 - Owners can upload only into a storage path prefixed with their authenticated user ID.
 - Migration 0002 restricts public storage reads to images referenced by active ads.
 - Verify RLS with two different test accounts: neither account must read or mutate another owner's paused/sold ads except only public active ads may be visible.
