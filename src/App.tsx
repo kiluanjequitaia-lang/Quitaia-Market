@@ -21,7 +21,8 @@ export default function App() {
  const [authError,setAuthError] = useState('');
  const [categories,setCategories] = useState<Category[]>(categoryFallback);
  const [products,setProducts] = useState<Product[]>(demoProducts);
- const [activeProduct,setActiveProduct] = useState<Product|null>(null);\n const [editingProductId,setEditingProductId] = useState<string|null>(null);
+ const [activeProduct,setActiveProduct] = useState<Product|null>(null);
+ const [editingProductId,setEditingProductId] = useState<string|null>(null);
  const [search,setSearch] = useState('');
  const [categoryFilter,setCategoryFilter] = useState('');
  const [myProducts,setMyProducts] = useState<Product[]>([]);
