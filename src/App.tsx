@@ -143,52 +143,79 @@ export default function App() {
  async function publishAd() {
   setNotice('');
   if(!supabase || !session) {setNotice('Inicia sessão para publicar um anúncio.');setPage('profile');return;}
-  if(!title.trim() || Number(price)<=0 || !categoryId) {setNotice('Preenche o título, categoria e um preço superior a zero.');return;}
+  if(!title.trim() || !Number.isFinite(Number(price)) || Number(price)<=0 || !categoryId) {setNotice('Preenche o título, categoria e um preço superior a zero.');return;}
   const contact = whatsappPhone.replace(/\s/g,'');
-  if(contact && !/^\\+244\\d{9}$/.test(contact)) {setNotice('O WhatsApp deve estar no formato +244923456789.');return;}
+  if(contact && !/^\+244\d{9}$/.test(contact)) {setNotice('O WhatsApp deve estar no formato +244923456789.');return;}
   if(photos.length>9) {setNotice('Podes adicionar no máximo 9 fotografias.');return;}
   setBusy(true);
   try {
+   const wasEditing = Boolean(editingProductId);
    let productId = editingProductId;
    if(productId) {
     const {error} = await supabase.from('products').update({title:title.trim(),description:description.trim()||null,price:Number(price),category_id:categoryId,city:city.trim()||null,whatsapp_phone:contact||null}).eq('id',productId).eq('seller_id',session.user.id);
     if(error) {setNotice(error.message);return;}
-    if(photos.length) {
-     const {data:oldImages} = await supabase.from('product_images').select('storage_path').eq('product_id',productId);
-     const oldPaths = (oldImages||[]).map(row=>row.storage_path as string);
-     if(oldPaths.length) {
-      const {error:removeError} = await supabase.storage.from('product-images').remove(oldPaths);
-      if(removeError) {setNotice('Os dados foram actualizados, mas não foi possível substituir as fotografias antigas. '+removeError.message);return;}
-      const {error:deleteRowsError} = await supabase.from('product_images').delete().eq('product_id',productId);
-      if(deleteRowsError) {setNotice('Os dados foram actualizados, mas não foi possível actualizar a galeria. '+deleteRowsError.message);return;}
-     }
-    }
    } else {
     const {data:product,error} = await supabase.from('products').insert({seller_id:session.user.id,title:title.trim(),description:description.trim()||null,price:Number(price),category_id:categoryId,city:city.trim()||null,whatsapp_phone:contact||null,status:'active'}).select().single();
     if(error || !product) {setNotice(error?.message||'Não foi possível criar o anúncio.');return;}
     productId = product.id;
    }
-   let imageFailures = 0;
+
    if(photos.length && productId) {
-    const {data:existingImages} = await supabase.from('product_images').select('position').eq('product_id',productId).order('position',{ascending:false}).limit(1);
-    const firstPosition = existingImages?.length ? Number(existingImages[0].position)+1 : 0;
+    const {data:oldImages,error:oldImagesError} = await supabase.from('product_images').select('id,product_id,storage_path,position').eq('product_id',productId).order('position');
+    if(oldImagesError) {setNotice('Os dados foram guardados, mas não foi possível ler a galeria: '+oldImagesError.message);return;}
+    const uploadedPaths: string[] = [];
     const imageRows = [] as {product_id:string;storage_path:string;position:number}[];
+    let imageFailures = 0;
     for(let i=0;i<photos.length;i++) {
      const file=photos[i];
-     const path = session.user.id + '/' + productId + '/' + Date.now() + '-' + i + '.jpg';
+     const path=session.user.id+'/'+productId+'/'+Date.now()+'-'+crypto.randomUUID()+'-'+i+'.jpg';
      try {
-      const compressed = await compressPhoto(file);
+      const compressed=await compressPhoto(file);
       const {error:uploadError}=await supabase.storage.from('product-images').upload(path,compressed,{contentType:'image/jpeg',upsert:false});
       if(uploadError) {imageFailures++;continue;}
-      imageRows.push({product_id:productId,storage_path:path,position:firstPosition+i});
+      uploadedPaths.push(path);
+      imageRows.push({product_id:productId,storage_path:path,position:i});
      } catch { imageFailures++; }
     }
-    if(imageRows.length) {const {error:imageError}=await supabase.from('product_images').insert(imageRows);if(imageError)imageFailures+=imageRows.length;}
+
+    if(imageFailures) {
+     if(uploadedPaths.length) await supabase.storage.from('product-images').remove(uploadedPaths);
+     setNotice((wasEditing?'Dados do anúncio actualizados, mas as fotografias anteriores foram mantidas. ':'Anúncio criado sem alterar nenhuma galeria existente. ') + imageFailures + ' fotografia(s) não puderam ser preparadas ou enviadas. Tenta novamente.');
+     if(!wasEditing) await setProductStatus({id:productId,seller_id:session.user.id} as Product,'paused');
+     await loadPublicData();
+     await loadMine();
+     return;
+    }
+
+    if(wasEditing && oldImages?.length) {
+     const {error:deleteRowsError} = await supabase.from('product_images').delete().eq('product_id',productId);
+     if(deleteRowsError) {
+      if(uploadedPaths.length) await supabase.storage.from('product-images').remove(uploadedPaths);
+      setNotice('Não foi possível substituir a galeria. As fotografias antigas foram preservadas: '+deleteRowsError.message);
+      return;
+     }
+    }
+    if(imageRows.length) {
+     const {error:imageError} = await supabase.from('product_images').insert(imageRows);
+     if(imageError) {
+      if(wasEditing && oldImages?.length) {
+       const restoreRows=oldImages.map((row:any)=>({id:row.id,product_id:row.product_id,storage_path:row.storage_path,position:row.position}));
+       await supabase.from('product_images').insert(restoreRows);
+      }
+      if(uploadedPaths.length) await supabase.storage.from('product-images').remove(uploadedPaths);
+      setNotice('Não foi possível guardar a nova galeria. A operação foi revertida: '+imageError.message);
+      return;
+     }
+    }
+    if(wasEditing && oldImages?.length) {
+     const oldPaths=oldImages.map((row:any)=>row.storage_path as string);
+     await supabase.storage.from('product-images').remove(oldPaths);
+    }
    }
-   const wasEditing = Boolean(editingProductId);
+
    setTitle('');setDescription('');setPrice('');setWhatsappPhone('');setPhotos([]);setEditingProductId(null);setPage('home');
    await loadPublicData();await loadMine();
-   setNotice(imageFailures?`${wasEditing?'Anúncio actualizado':'Anúncio criado'}; ${imageFailures} fotografia(s) não foram guardadas.`:wasEditing?'Anúncio actualizado.':'Anúncio publicado.');
+   setNotice(wasEditing?'Anúncio actualizado.':'Anúncio publicado.');
   } catch (error) {
    setNotice(error instanceof Error?error.message:'Falha inesperada ao guardar o anúncio.');
   } finally {
