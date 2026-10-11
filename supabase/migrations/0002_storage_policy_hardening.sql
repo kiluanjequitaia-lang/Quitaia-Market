@@ -24,5 +24,4 @@ using (
 -- Add the opt-in contact field when upgrading an already-created database.
 alter table public.products add column if not exists whatsapp_phone text;
 alter table public.products drop constraint if exists products_whatsapp_phone_format;
-alter table public.products add constraint products_whatsapp_phone_format check (whatsapp_phone is null or whatsapp_phone ~ '^[+]244[0-9]{9}
-);
+alter table public.products add constraint products_whatsapp_phone_format check (whatsapp_phone is null or whatsapp_phone ~ '^[+]244[0-9]{9}$');
