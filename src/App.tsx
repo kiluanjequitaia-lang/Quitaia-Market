@@ -88,19 +88,27 @@ export default function App() {
   if(!title.trim() || Number(price)<=0 || !categoryId) {setNotice('Preenche o título, categoria e um preço superior a zero.');return;}
   if(photos.length>9) {setNotice('Podes adicionar no máximo 9 fotografias.');return;}
   setBusy(true);
-  const {data:product,error} = await supabase.from('products').insert({seller_id:session.user.id,title:title.trim(),description:description.trim()||null,price:Number(price),category_id:categoryId,city:city.trim()||null,status:'active'}).select().single();
-  if(error || !product) {setNotice(error?.message||'Não foi possível criar o anúncio.');setBusy(false);return;}
-  const imageRows = [] as {product_id:string;storage_path:string;position:number}[];
-  for(let i=0;i<photos.length;i++) {
-   const file=photos[i];
-   const path=`${session.user.id}/${product.id}/${Date.now()}-${i}.jpg`;
-   const {error:uploadError}=await supabase.storage.from('product-images').upload(path,file,{contentType:'image/jpeg',upsert:false});
-   if(uploadError) {setNotice(`Anúncio criado, mas uma fotografia falhou: ${uploadError.message}`);continue;}
-   imageRows.push({product_id:product.id,storage_path:path,position:i});
+  try {
+   const {data:product,error} = await supabase.from('products').insert({seller_id:session.user.id,title:title.trim(),description:description.trim()||null,price:Number(price),category_id:categoryId,city:city.trim()||null,status:'active'}).select().single();
+   if(error || !product) {setNotice(error?.message||'Não foi possível criar o anúncio.');return;}
+   const imageRows = [] as {product_id:string;storage_path:string;position:number}[];
+   let imageFailures = 0;
+   for(let i=0;i<photos.length;i++) {
+    const file=photos[i];
+    const path=`${session.user.id}/${product.id}/${Date.now()}-${i}.jpg`;
+    const {error:uploadError}=await supabase.storage.from('product-images').upload(path,file,{contentType:file.type,upsert:false});
+    if(uploadError) {imageFailures++;continue;}
+    imageRows.push({product_id:product.id,storage_path:path,position:i});
+   }
+   if(imageRows.length) {const {error:imageError}=await supabase.from('product_images').insert(imageRows);if(imageError)imageFailures+=imageRows.length;}
+   setTitle('');setDescription('');setPrice('');setPhotos([]);setPage('home');
+   await loadPublicData();await loadMine();
+   setNotice(imageFailures?`Anúncio criado; ${imageFailures} fotografia(s) não foram guardadas. Edita o anúncio para tentar novamente.`:'Anúncio publicado.');
+  } catch (error) {
+   setNotice(error instanceof Error?error.message:'Falha inesperada ao publicar o anúncio.');
+  } finally {
+   setBusy(false);
   }
-  if(imageRows.length) {const {error:imageError}=await supabase.from('product_images').insert(imageRows);if(imageError)setNotice(`Anúncio criado, mas as imagens não foram associadas: ${imageError.message}`);}
-  setTitle('');setDescription('');setPrice('');setPhotos([]);setBusy(false);setPage('home');
-  await loadPublicData();await loadMine();setNotice('Anúncio publicado.');
  }
  async function setProductStatus(product:Product,status:'active'|'paused'|'sold') {
   if(!supabase || !session)return;
@@ -115,7 +123,7 @@ export default function App() {
  const filtered = useMemo(()=>products.filter(p=>(!search || p.title.toLowerCase().includes(search.toLowerCase())) && (!categoryFilter||p.category_id===categoryFilter)),[products,search,categoryFilter]);
  function productImage(p:Product) { const imgs=[...(p.product_images||[])].sort((a,b)=>a.position-b.position);return imgs[0]&&supabase?publicUrl(imgs[0].storage_path):''; }
  function topBar(titleText:string,back?:()=>void) {return <header className="topbar">{back&&<button className="iconbtn" onClick={back} aria-label="Voltar"><ArrowLeft size={20}/></button>}<div className="brandmark">Q</div><strong>{titleText}</strong><button className="iconbtn push" aria-label="Notificações" onClick={()=>setNotice('As notificações serão activadas numa fase posterior.')}><Bell size={20}/></button></header>;}
- function productCard(p:Product) {return <button className="product-card" key={p.id} onClick={()=>{setActiveProduct(p);setPage('detail')}}><div className="product-media">{productImage(p)?<img src={productImage(p)} alt={p.title}/>:<div className="placeholder-photo"><ShoppingBag size={34}/></div>}<button className="heart" aria-label="Guardar anúncio" onClick={e=>{e.stopPropagation();setSaved(prev=>prev.includes(p.id)?prev.filter(id=>id!==p.id):[...prev,p.id])}}><Heart size={17} fill={saved.includes(p.id)?'currentColor':'none'}/></button></div><div className="product-copy"><strong>{p.title}</strong><b>{formatKz(p.price)}</b><small>{p.city||'Angola'}</small></div></button>;}
+ function productCard(p:Product) {return <article className="product-card" key={p.id}><button className="product-open" onClick={()=>{setActiveProduct(p);setPage('detail')}} aria-label={`Ver anúncio: ${p.title}`}><div className="product-media">{productImage(p)?<img src={productImage(p)} alt={p.title}/>:<div className="placeholder-photo"><ShoppingBag size={34}/></div>}</div><div className="product-copy"><strong>{p.title}</strong><b>{formatKz(p.price)}</b><small>{p.city||'Angola'}</small></div></button><button className="heart" aria-label="Guardar anúncio" onClick={()=>setSaved(prev=>prev.includes(p.id)?prev.filter(id=>id!==p.id):[...prev,p.id])}><Heart size={17} fill={saved.includes(p.id)?'currentColor':'none'}/></button></article>;}
  function bottomNav() {return <nav className="bottom-nav">{[{id:'home' as Page,label:'Início',icon:Home},{id:'search' as Page,label:'Pesquisar',icon:Search},{id:'publish' as Page,label:'Publicar',icon:Plus},{id:'saved' as Page,label:'Guardados',icon:Heart},{id:'profile' as Page,label:'Perfil',icon:UserRound}].map(item=><button key={item.id} className={page===item.id?'active':''} onClick={()=>setPage(item.id)}><item.icon size={20}/><span>{item.label}</span></button>)}</nav>;}
  function authPanel() {return <section className="auth-panel"><div className="auth-emblem"><Smartphone size={30}/></div><h2>{otpSent?'Confirma o teu número':'Entra no Quitaia'}</h2><p>Usa o teu número de telefone para continuar de forma segura.</p>{!otpSent?<><label>Número de telefone</label><input value={phone} onChange={e=>setPhone(e.target.value)} inputMode="tel" placeholder="+244923456789"/><button className="primary" onClick={()=>void sendOtp()} disabled={authBusy}>{authBusy?<LoaderCircle className="spin"/>:'Enviar código SMS'}</button></>:<><label>Código recebido por SMS</label><input value={otp} onChange={e=>setOtp(e.target.value)} inputMode="numeric" maxLength={6} placeholder="123456"/><button className="primary" onClick={()=>void verifyOtp()} disabled={authBusy}>{authBusy?<LoaderCircle className="spin"/>:'Confirmar código'}</button><button className="text-button" onClick={()=>{setOtpSent(false);setOtp('')}}>Alterar número</button></>}{authError&&<p className="error">{authError}</p>}{!isSupabaseConfigured&&<p className="hint">A interface está pronta, mas falta configurar as credenciais públicas do Supabase.</p>}</section>;}
  return <div className="app-shell">
