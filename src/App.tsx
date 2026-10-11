@@ -22,6 +22,7 @@ export default function App() {
  const [categories,setCategories] = useState<Category[]>(categoryFallback);
  const [products,setProducts] = useState<Product[]>(demoProducts);
  const [activeProduct,setActiveProduct] = useState<Product|null>(null);
+ const [imageUrls,setImageUrls] = useState<Record<string,string>>({});
  const [editingProductId,setEditingProductId] = useState<string|null>(null);
  const [search,setSearch] = useState('');
  const [categoryFilter,setCategoryFilter] = useState('');
@@ -49,6 +50,24 @@ export default function App() {
  useEffect(() => {
   if (session?.user.id) { void loadMine(); } else setMyProducts([]);
  },[session?.user.id]);
+
+ useEffect(() => {
+  if (!supabase) return;
+  const paths = new Set<string>();
+  [...products,...myProducts].forEach(product => (product.product_images || []).forEach(image => paths.add(image.storage_path)));
+  const missing = [...paths].filter(path => !imageUrls[path]);
+  if (!missing.length) return;
+  let cancelled = false;
+  void Promise.all(missing.map(async path => {
+   const {data,error} = await supabase!.storage.from('product-images').createSignedUrl(path, 3600);
+   return error || !data?.signedUrl ? null : [path,data.signedUrl] as const;
+  })).then(results => {
+   if (cancelled) return;
+   const resolved = Object.fromEntries(results.filter((row): row is readonly [string,string] => row !== null));
+   if (Object.keys(resolved).length) setImageUrls(previous => ({...previous,...resolved}));
+  }).catch(() => { /* Missing thumbnails should not prevent the listing itself from rendering. */ });
+  return () => { cancelled = true; };
+ },[products,myProducts,session?.user.id,imageUrls]);
 
  async function loadPublicData() {
   if (!supabase) return;
@@ -82,7 +101,7 @@ export default function App() {
   if (error) setAuthError(error.message); else {setOtpSent(false);setOtp('');setNotice('Sessão iniciada com sucesso.');}
  }
  async function signOut() { if(supabase) await supabase.auth.signOut(); setNotice('Sessão terminada.'); }
- function publicUrl(path:string) { const {data}=supabase!.storage.from('product-images').getPublicUrl(path);return data.publicUrl; }
+ function publicUrl(path:string) { return imageUrls[path] || ''; }
  async function publishAd() {
   setNotice('');
   if(!supabase || !session) {setNotice('Inicia sessão para publicar um anúncio.');setPage('profile');return;}
