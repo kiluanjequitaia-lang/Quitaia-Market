@@ -34,7 +34,8 @@ create table if not exists public.products (
  price numeric(14,2) not null check (price > 0),
  currency text not null default 'AOA' check (currency = 'AOA'),
  city text,
- whatsapp_phone text check (whatsapp_phone is null or whatsapp_phone ~ '^[+]244[0-9]{9}
+ whatsapp_phone text check (whatsapp_phone is null or whatsapp_phone ~ '^[+]244[0-9]{9}$'),
+ status text not null default 'active' check (status in ('active','paused','sold','deleted')),
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now()
 );
