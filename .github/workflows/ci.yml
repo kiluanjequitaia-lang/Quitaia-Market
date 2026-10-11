@@ -7,22 +7,25 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: quitaia-market-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+        uses: actions/checkout@v5
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
-      - name: Install dependencies
-        run: npm install --package-lock-only && npm ci
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
       - name: Dependency audit summary
         run: |
           npm audit --json > /tmp/npm-audit.json || true
@@ -35,13 +38,3 @@ jobs:
         run: npm test
       - name: Production build
         run: npm run build
-      - name: Commit dependency lockfile when changed
-        if: success() && github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          if [ -n "$(git status --porcelain -- package-lock.json)" ]; then
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json
-            git commit -m "build: refresh npm dependency lockfile"
-            git push origin HEAD:main
-          fi
