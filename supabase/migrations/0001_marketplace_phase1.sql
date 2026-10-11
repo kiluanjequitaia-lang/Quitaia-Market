@@ -82,7 +82,7 @@ drop policy if exists "profiles update own" on public.profiles;
 create policy "profiles update own" on public.profiles for update to authenticated using (auth.uid() = id) with check (auth.uid() = id);
 
 drop policy if exists "categories visible" on public.categories;
-create policy "categories visible" on public.categories for select to authenticated using (is_active = true);
+create policy "categories visible" on public.categories for select to anon, authenticated using (is_active = true);
 drop policy if exists "stores public active read" on public.stores;
 create policy "stores public active read" on public.stores for select to anon, authenticated using (is_active = true);
 drop policy if exists "stores owner manage" on public.stores;
@@ -107,9 +107,10 @@ create policy "variants active read" on public.product_variants for select to an
 drop policy if exists "variants owner manage" on public.product_variants;
 create policy "variants owner manage" on public.product_variants for all to authenticated using (exists(select 1 from public.products p where p.id=product_id and p.seller_id=auth.uid())) with check (exists(select 1 from public.products p where p.id=product_id and p.seller_id=auth.uid()));
 
-insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('product-images','product-images',true,5242880,array['image/jpeg','image/png','image/webp']) on conflict(id) do update set public=true,file_size_limit=5242880,allowed_mime_types=array['image/jpeg','image/png','image/webp'];
+insert into storage.buckets(id,name,public,file_size_limit,allowed_mime_types) values('product-images','product-images',false,5242880,array['image/jpeg','image/png','image/webp']) on conflict(id) do update set public=false,file_size_limit=5242880,allowed_mime_types=array['image/jpeg','image/png','image/webp'];
 drop policy if exists "Public read product images" on storage.objects;
-create policy "Public read product images" on storage.objects for select to anon,authenticated using(bucket_id='product-images');
+drop policy if exists "Owner read product images" on storage.objects;
+create policy "Owner read product images" on storage.objects for select to authenticated using(bucket_id='product-images' and (storage.foldername(name))[1] = auth.uid()::text);
 drop policy if exists "Owner upload product images" on storage.objects;
 create policy "Owner upload product images" on storage.objects for insert to authenticated with check(bucket_id='product-images' and (storage.foldername(name))[1] = auth.uid()::text);
 drop policy if exists "Owner update product images" on storage.objects;
