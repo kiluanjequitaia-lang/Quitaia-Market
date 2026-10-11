@@ -38,6 +38,8 @@ export default function App() {
  const [authBusy,setAuthBusy] = useState(false);
  const [authError,setAuthError] = useState('');
  const [categories,setCategories] = useState<Category[]>(categoryFallback);
+ const [publicLoading,setPublicLoading] = useState(true);
+ const [publicError,setPublicError] = useState('');
  const [products,setProducts] = useState<Product[]>(initialProducts);
  const [activeProduct,setActiveProduct] = useState<Product|null>(null);
  const [imageUrls,setImageUrls] = useState<Record<string,string>>({});
@@ -93,13 +95,25 @@ export default function App() {
  },[products,myProducts,session?.user.id,imageUrls]);
 
  async function loadPublicData() {
-  if (!supabase) return;
-  const [{data:cs},{data:ps}] = await Promise.all([
-   supabase.from('categories').select('id,name,icon').eq('is_active',true).order('position'),
-   supabase.from('products').select('*,product_images(id,storage_path,position)').eq('status','active').order('created_at',{ascending:false}).limit(40)
-  ]);
-  if (cs?.length) setCategories(cs as Category[]);
-  if (ps) setProducts(ps as Product[]);
+  if (!supabase) { setPublicLoading(false); return; }
+  setPublicLoading(true);
+  setPublicError('');
+  try {
+   const [{data:cs,error:categoriesError},{data:ps,error:productsError}] = await Promise.all([
+    supabase.from('categories').select('id,name,icon').eq('is_active',true).order('position'),
+    supabase.from('products').select('*,product_images(id,storage_path,position)').eq('status','active').order('created_at',{ascending:false}).limit(40)
+   ]);
+   if(categoriesError) throw categoriesError;
+   if(productsError) throw productsError;
+   setCategories((cs||[]) as Category[]);
+   setProducts((ps||[]) as Product[]);
+  } catch (error) {
+   setCategories([]);
+   setProducts([]);
+   setPublicError(error instanceof Error?error.message:'Não foi possível carregar os anúncios.');
+  } finally {
+   setPublicLoading(false);
+  }
  }
  async function loadMine() {
   if (!supabase || !session?.user.id) return;
