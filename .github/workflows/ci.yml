@@ -20,5 +20,7 @@ jobs:
         run: npm install --package-lock-only && npm ci
       - name: TypeScript validation
         run: npm run typecheck
+      - name: Unit tests
+        run: npm test
       - name: Production build
         run: npm run build
