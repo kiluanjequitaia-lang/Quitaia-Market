@@ -5,7 +5,7 @@
 - [x] GitHub Actions runs dependency installation, TypeScript validation, unit tests and a production build.
 - [x] Price format tested as `24.999,00 Kz`.
 - [ ] Ensure GitHub repository visibility matches the owner's intent; it is currently public.
-- [ ] Commit a reviewed lockfile once dependency versions are final and keep installs reproducible.
+- [x] Commit the npm lockfile and validate it in CI.
 
 ## Supabase
 - [ ] Choose and provision a dedicated Supabase project for Quitaia Market (do not reuse any other project).
