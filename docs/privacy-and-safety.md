@@ -16,7 +16,7 @@ As fotografias devem permanecer no bucket privado `product-images`. O cliente so
 
 ## Segurança e moderação
 
-Antes do lançamento público, implementar denúncia de anúncios, fluxo de moderação, regras sobre artigos proibidos, bloqueio de vendedores e canal de contacto para abusos. Definir como as denúncias são analisadas e como anúncios ou contas podem ser restringidos.
+O formulário de denúncia e a tabela privada de denúncias já existem. Antes do lançamento público, implementar a fila administrativa de moderação, regras operacionais sobre artigos proibidos, bloqueio de vendedores e canal de contacto para abusos. Definir como as denúncias são analisadas e como anúncios ou contas podem ser restringidos.
 
 ## Ciclo de vida dos dados
 
