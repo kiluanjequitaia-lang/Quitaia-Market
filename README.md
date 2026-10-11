@@ -22,10 +22,10 @@ Marketplace mobile-first para Angola, em português de Angola, com preços em Kz
 
 1. Instala Node.js 22 ou uma versão LTS compatível.
 2. Executa `npm ci` para instalar as dependências bloqueadas em `package-lock.json`.
-3. Copia `.env.example` para `.env.local` e configura `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` de um projecto Supabase **dedicado** ao Quitaia Market.
-4. Aplica por ordem os três ficheiros SQL em `supabase/migrations/` e depois executa `supabase/seed.sql`.
+3. Copia `.env.example` para `.env.local` e configura `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` de um projecto Supabase **dedicado** ao Quitaia Market. Não reutilizes o backend de outras aplicações e nunca coloques uma chave `service_role` no frontend.
+4. Confirma que estás no projecto correcto, aplica por ordem os quatro ficheiros SQL em `supabase/migrations/` (`0001` a `0004`) e depois executa `supabase/seed.sql`.
 5. Activa Phone Auth e configura um fornecedor SMS real antes de testar autenticação.
-6. Executa `npm run dev`.
+6. Executa `npm run typecheck`, `npm test`, `npm run build` e depois `npm run dev`.
 
 ## Estado técnico verificado
 
