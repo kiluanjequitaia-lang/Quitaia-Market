@@ -28,7 +28,8 @@
 
 ## Before launch
 - [ ] Add reporting/moderation and prohibited-listing policy.
-- [ ] Publish terms and privacy notice reviewed for Angola.
+- [x] Add preliminary privacy and terms views inside the app.
+- [ ] Publish final terms and privacy notice reviewed for Angola.
 - [ ] Confirm support contact and data deletion process.
 - [ ] Set the correct repository visibility and production domain.
 - [ ] Perform end-to-end tests against a staging Supabase project before production publication.
