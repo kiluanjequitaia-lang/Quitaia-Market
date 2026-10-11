@@ -1,35 +1,35 @@
 # Supabase — Quitaia Market
 
-Use a dedicated Supabase project for this marketplace. Do not reuse the database of UBUNTU, Escola IA, CaixaFácil or any other project.
+Usa um projecto Supabase dedicado ao marketplace. Não reutilizes a base de dados do UBUNTU, Escola IA, CaixaFácil ou qualquer outro projecto.
 
-## Apply schema
+## Aplicar o esquema
 
-1. Open the SQL Editor in the dedicated project.
-2. Run `migrations/0001_marketplace_phase1.sql`.
-3. Run `migrations/0002_storage_policy_hardening.sql`.
-4. Run `migrations/0003_product_category_guardrails.sql`.
-5. Run `seed.sql` to add categories only.
-6. Inspect the tables and RLS policies in the dashboard.
+1. Abre o SQL Editor do projecto Supabase dedicado.
+2. Executa `migrations/0001_marketplace_phase1.sql`.
+3. Executa `migrations/0002_storage_policy_hardening.sql`.
+4. Executa `migrations/0003_product_category_guardrails.sql`.
+5. Executa `seed.sql) para inserir apenas as categorias iniciais.
+6. Inspecciona as tabelas e as políticas RLS no painel.
 
-## Auth
+## Autenticação
 
-- Enable Phone Auth.
-- Configure an SMS provider and verify delivery to Angolan +244 numbers.
-- Configure allowed redirect URLs for local development and the eventual production domain.
-- Do not reduce OTP protections to make development easier.
+- Activa Phone Auth.
+- Configura um fornecedor SMS real e confirma a entrega de mensagens para números angolanos +244.
+- Configura os URLs de redireccionamento permitidos para desenvolvimento e para o domínio final.
+- Não reduzas as protecções de OTP apenas para facilitar o desenvolvimento.
 
-## Storage and RLS
+## Armazenamento e RLS
 
-- Bucket `product-images` is private, with a 5 MiB upload limit and image MIME types. The frontend requests short-lived signed URLs for active ad photos.
-- Owners can upload only into a storage path prefixed with their authenticated user ID.
-- Migration 0002 restricts public storage reads to images referenced by active ads.
-- Verify RLS with two different test accounts: neither account must read or mutate another owner's paused/sold ads except only public active ads may be visible.
+- O bucket `product-images` é privado, tem limite de 5 MiB por ficheiro e aceita apenas JPEG, PNG e WebP. A aplicação pede URLs assinados de curta duração para fotografias de anúncios activos.
+- Cada vendedor só pode carregar ficheiros para um caminho iniciado pelo seu ID autenticado.
+- A migração 0002 restringe a leitura das fotografias públicas assinadas às imagens associadas a anúncios activos, mantendo a leitura do proprietário.
+- Testa as políticas com duas contas diferentes. Nenhuma conta deve poder consultar ou modificar os anúncios pausados/vendidos de outra conta; apenas anúncios activos são visíveis publicamente.
 
-## Pre-launch verification
+## Verificação antes do lançamento
 
-- [ ] Test SMS OTP send, invalid code, valid code, logout and session persistence.
-- [ ] Test creating ad with 0, 1 and 9 photos, then reject the 10th photo.
-- [ ] Test upload failures and ensure the UI does not claim every image succeeded.
-- [ ] Test pause, reactivate, sold and remove actions.
-- [ ] Confirm paused/sold ads remain visible in owner management but disappear from public feed.
-- [ ] Run Supabase security advisors and resolve material warnings.
+- [ ] Testar envio de OTP, código inválido, código válido, nova tentativa, logout e persistência de sessão.
+- [ ] Testar publicação com 0, 1 e 9 fotografias e rejeitar a 10.ª.
+- [ ] Testar falhas de compressão/upload e confirmar que a interface informa correctamente o resultado.
+- [ ] Testar editar, pausar, reactivar, marcar como vendido e remover um anúncio.
+- [ ] Confirmar que anúncios pausados/vendidos aparecem apenas na gestão do proprietário e desaparecem do feed público.
+- [ ] Executar os Security e Performance Advisors do Supabase e resolver alertas relevantes.
