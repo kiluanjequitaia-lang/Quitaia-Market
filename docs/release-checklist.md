@@ -8,8 +8,9 @@
 - [ ] Confirmar que a visibilidade do repositório corresponde à intenção do proprietário; neste momento está público.
 
 ## Supabase
+- [ ] Criar `.env.local` apenas localmente; nunca commitar URL com credenciais privadas, `service_role` ou tokens.
 - [ ] Criar um projecto Supabase dedicado ao Quitaia Market (não reutilizar outros projectos).
-- [ ] Aplicar as três migrações por ordem e executar o seed das categorias.
+- [ ] Aplicar as quatro migrações por ordem (`0001` a `0004`) e executar `supabase/seed.sql` apenas depois de confirmar que o projecto Supabase é exclusivo do Quitaia Market.
 - [ ] Configurar OTP por telefone e fornecedor SMS com entrega para números angolanos.
 - [ ] Configurar os URLs de autenticação permitidos.
 - [ ] Testar RLS com duas contas independentes, incluindo tentativas de leitura e alteração de dados de outro utilizador.
