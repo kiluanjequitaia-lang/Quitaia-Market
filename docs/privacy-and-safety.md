@@ -1,27 +1,27 @@
-# Privacy and listing safety — Quitaia Market
+# Privacidade e segurança dos anúncios — Quitaia Market
 
-This document records the intended product behaviour of the current starter. It is not legal advice and must be checked against applicable Angolan law before public launch.
+Este documento descreve o comportamento previsto para a versão inicial. Não constitui aconselhamento jurídico e deve ser revisto à luz da legislação angolana antes do lançamento público.
 
-## Personal data in the current build
+## Dados pessoais na versão actual
 
-- Phone number is used for Supabase phone OTP authentication.
-- The seller may optionally add a WhatsApp number to an individual listing. The form explicitly warns that this number is visible to interested people. Do not auto-fill it from the private authentication profile.
-- Profile display name and city are intended to be visible only to the authenticated owner in the current database policies.
-- Listing title, price, description, city, category and active listing photos are intended to be visible to visitors.
-- Saved listing IDs are stored in browser local storage on that device.
+- O número de telefone é utilizado para autenticação por código SMS no Supabase.
+- O vendedor pode adicionar, de forma opcional, um número WhatsApp a um anúncio. O formulário avisa que este contacto ficará visível a quem consultar o anúncio. O telefone privado usado no login não é preenchido automaticamente no anúncio.
+- O nome de apresentação e a cidade do perfil destinam-se a ser visíveis apenas ao próprio utilizador, de acordo com as políticas de base de dados.
+- Título, preço, descrição, cidade, categoria e fotografias de anúncios activos destinam-se a ser visíveis aos visitantes.
+- Os IDs dos anúncios guardados como favoritos ficam no armazenamento local do navegador desse dispositivo.
 
-## Photo access
+## Acesso às fotografias
 
-Product photos must be stored in the private `product-images` bucket. The client requests short-lived signed URLs; public read policies should allow only images attached to active products. Do not change the bucket to public, since public object URLs bypass these storage-row policies.
+As fotografias devem permanecer no bucket privado `product-images`. O cliente solicita URLs assinados de curta duração; a política de leitura deve permitir o acesso público apenas às imagens referenciadas por anúncios activos. Não tornes o bucket público, pois URLs públicos de objectos ultrapassam estas políticas de leitura.
 
-## User safety and moderation
+## Segurança e moderação
 
-Before public launch, add listing reporting, a moderation workflow, prohibited-items rules, seller blocking, and an abuse contact channel. Define how complaints are reviewed and how listings/accounts may be restricted.
+Antes do lançamento público, implementar denúncia de anúncios, fluxo de moderação, regras sobre artigos proibidos, bloqueio de vendedores e canal de contacto para abusos. Definir como as denúncias são analisadas e como anúncios ou contas podem ser restringidos.
 
-## Data lifecycle
+## Ciclo de vida dos dados
 
-Before public launch, define a retention/deletion policy for account data, listings and uploaded files. Test that deleting a listing also removes its database image rows and orphaned storage objects. Current status changes use soft-delete for listings, and the current starter does not yet provide complete account deletion.
+Antes do lançamento, definir regras de retenção e eliminação de dados da conta, anúncios e ficheiros carregados. Testar se a remoção de um anúncio elimina também as referências de imagens e os ficheiros de armazenamento. A versão actual usa remoção lógica dos anúncios e tenta limpar as imagens; a eliminação completa da conta ainda não está implementada.
 
-## Launch requirement
+## Requisitos de lançamento
 
-Publish a privacy notice and terms in Portuguese. Explain what is public, how to withdraw a WhatsApp contact by editing/removing the listing, how to request account deletion, and how to report abuse. Have the policy reviewed for the target market before accepting real users.
+Publicar aviso de privacidade e termos de utilização em português, explicando o que é público, como retirar um contacto WhatsApp ao editar/remover o anúncio, como solicitar eliminação da conta e como denunciar abusos. Os textos integrados na aplicação são preliminares e precisam de revisão jurídica antes de aceitar utilizadores reais.
