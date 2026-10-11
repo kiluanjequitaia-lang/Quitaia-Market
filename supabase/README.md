@@ -9,7 +9,7 @@ Usa um projecto Supabase dedicado ao marketplace. Não reutilizes a base de dado
 3. Executa `migrations/0002_storage_policy_hardening.sql`.
 4. Executa `migrations/0003_product_category_guardrails.sql`.
 5. Executa `seed.sql) para inserir apenas as categorias iniciais.
-6. Inspecciona as tabelas e as políticas RLS no painel.
+7. Inspecciona as tabelas e as políticas RLS no painel.
 
 ## Autenticação
 
