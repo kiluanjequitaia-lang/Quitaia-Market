@@ -3,6 +3,7 @@ import { ArrowLeft, Bell, Camera, CheckCircle2, ChevronRight, CircleUserRound, H
 import type { Session } from '@supabase/supabase-js';
 import { isSupabaseConfigured, supabase } from './lib/supabase';
 import { formatKz } from './lib/currency';
+import { normalizeAngolanPhone, toWhatsAppDigits } from './lib/angolan-phone';
 import type { Category, Product } from './types';
 
 const categoryFallback: Category[] = [
@@ -124,17 +125,21 @@ export default function App() {
  async function sendOtp() {
   setAuthError('');
   if (!supabase) {setAuthError('Configura o Supabase no ficheiro .env.local para activar a autenticação.');return;}
-  if (!/^\+244\d{9}$/.test(phone.replace(/\s/g,''))) {setAuthError('Introduz um número angolano no formato +244923456789.');return;}
+  const normalizedPhone = normalizeAngolanPhone(phone);
+  if (!normalizedPhone) {setAuthError('Introduz um número angolano válido, por exemplo +244923456789.');return;}
+  setPhone(normalizedPhone);
   setAuthBusy(true);
-  const {error} = await supabase.auth.signInWithOtp({phone:phone.replace(/\s/g,'')});
+  const {error} = await supabase.auth.signInWithOtp({phone:normalizedPhone});
   setAuthBusy(false);
   if (error) setAuthError(error.message); else setOtpSent(true);
  }
  async function verifyOtp() {
   setAuthError('');
   if (!supabase) return;
+  const normalizedPhone = normalizeAngolanPhone(phone);
+  if (!normalizedPhone) {setAuthError('Introduz um número angolano válido, por exemplo +244923456789.');return;}
   setAuthBusy(true);
-  const {error} = await supabase.auth.verifyOtp({phone:phone.replace(/\s/g,''),token:otp,type:'sms'});
+  const {error} = await supabase.auth.verifyOtp({phone:normalizedPhone,token:otp,type:'sms'});
   setAuthBusy(false);
   if (error) setAuthError(error.message); else {setOtpSent(false);setOtp('');setNotice('Sessão iniciada com sucesso.');}
  }
@@ -144,8 +149,10 @@ export default function App() {
   setNotice('');
   if(!supabase || !session) {setNotice('Inicia sessão para publicar um anúncio.');setPage('profile');return;}
   if(!title.trim() || !Number.isFinite(Number(price)) || Number(price)<=0 || !categoryId) {setNotice('Preenche o título, categoria e um preço superior a zero.');return;}
-  const contact = whatsappPhone.replace(/\s/g,'');
-  if(contact && !/^\+244\d{9}$/.test(contact)) {setNotice('O WhatsApp deve estar no formato +244923456789.');return;}
+  const contactInput = whatsappPhone.trim();
+  const normalizedContact = contactInput ? normalizeAngolanPhone(contactInput) : '';
+  const contact = normalizedContact || '';
+  if(contactInput && !normalizedContact) {setNotice('O WhatsApp deve ser um número angolano válido, por exemplo +244923456789.');return;}
   if(photos.length>9) {setNotice('Podes adicionar no máximo 9 fotografias.');return;}
   setBusy(true);
   try {
@@ -257,7 +264,7 @@ export default function App() {
    {page==='saved'&&<>{saved.length?<div className="product-grid">{products.filter(p=>saved.includes(p.id)).map(productCard)}</div>:<div className="empty-state"><Heart size={28}/><h3>Os teus guardados</h3><p>Guarda anúncios que te interessam para os encontrares facilmente.</p><button className="primary compact" onClick={()=>setPage('home')}>Explorar anúncios</button></div>}</>}
    {page==='profile'&&<>{session?<><div className="profile-card"><div className="profile-avatar"><CircleUserRound size={34}/></div><h2>{profileName.trim()||'A tua conta'}</h2><p>{session.user.phone||session.user.email}</p><span className="verified"><ShieldCheck size={14}/> Conta autenticada</span></div><section className="ad-form profile-form"><label>Nome a apresentar</label><input value={profileName} onChange={e=>setProfileName(e.target.value)} maxLength={80} placeholder="O teu nome"/><label>Cidade ou província</label><input value={profileCity} onChange={e=>setProfileCity(e.target.value)} maxLength={100} placeholder="Ex.: Luanda"/><button className="primary" onClick={()=>void saveProfile()} disabled={profileBusy}>{profileBusy?<LoaderCircle className="spin"/>:'Guardar perfil'}</button></section><div className="profile-menu"><button onClick={()=>{setPage('myads');void loadMine()}}><Tag/> Os meus anúncios <ChevronRight/></button><button onClick={()=>setNotice('A gestão de perfil será detalhada numa próxima fase.')}><CircleUserRound/> Dados do perfil <ChevronRight/></button><button onClick={()=>setNotice('As notificações serão activadas numa fase posterior.')}><Bell/> Notificações <ChevronRight/></button><button onClick={()=>void signOut()}><LogOut/> Terminar sessão <ChevronRight/></button></div></>:authPanel()}</>}
    {page==='myads'&&<><div className="section-heading"><h2>Os meus anúncios</h2><button className="subtle-link" onClick={()=>setPage('publish')}><Plus size={16}/> Novo</button></div>{myProducts.length?myProducts.map(p=><div className="my-ad" key={p.id}><div className="my-ad-photo">{productImage(p)?<img src={productImage(p)} alt=""/>:<ShoppingBag/>}</div><div className="my-ad-info"><strong>{p.title}</strong><b>{formatKz(p.price)}</b><small>Estado: {p.status}</small><div className="ad-actions">{p.status!=='active'&&p.status!=='sold'&&<button onClick={()=>void setProductStatus(p,'active')}>Activar</button>}<button onClick={()=>{setEditingProductId(p.id);setTitle(p.title);setDescription(p.description||'');setPrice(String(p.price));setWhatsappPhone(p.whatsapp_phone||'');setCity(p.city||'');setCategoryId(p.category_id);setPhotos([]);setPage('publish')}}>Editar</button>{p.status==='active'&&<button onClick={()=>void setProductStatus(p,'paused')}>Pausar</button>}{p.status!=='sold'&&<button onClick={()=>void setProductStatus(p,'sold')}>Vendido</button>}<button onClick={()=>void deleteProduct(p)}>Remover</button></div></div></div>):<div className="empty-state"><ShoppingBag size={28}/><h3>Ainda não tens anúncios</h3><p>Quando publicares, poderás geri-los aqui.</p><button className="primary compact" onClick={()=>setPage('publish')}>Publicar anúncio</button></div>}</>}
-   {page==='detail'&&activeProduct&&<article className="detail-view"><div className="detail-photo">{productImage(activeProduct)?<img src={productImage(activeProduct)} alt={activeProduct.title}/>:<ShoppingBag size={50}/>}</div>{(activeProduct.product_images||[]).length>1&&<div className="detail-gallery">{[...(activeProduct.product_images||[])].sort((a,b)=>a.position-b.position).map(image=>imageUrls[image.storage_path]?<img key={image.id} src={imageUrls[image.storage_path]} alt={activeProduct.title}/>:null)}</div>}<span className="eyebrow">{categories.find(c=>c.id===activeProduct.category_id)?.name||'Anúncio'}</span><h1>{activeProduct.title}</h1><strong className="detail-price">{formatKz(activeProduct.price)}</strong><p className="detail-location">{activeProduct.city||'Angola'}</p><h3>Descrição</h3><p>{activeProduct.description||'O vendedor não adicionou uma descrição.'}</p><button className="primary" onClick={()=>{const contact=activeProduct.whatsapp_phone?.replace(/\D/g,'');if(contact){const url='https://wa.me/'+contact+'?text='+encodeURIComponent('Olá! Tenho interesse no anúncio: '+activeProduct.title);window.open(url,'_blank','noopener,noreferrer');}else setNotice('O vendedor não disponibilizou WhatsApp neste anúncio.');}}>Contactar vendedor pelo WhatsApp</button></article>}
+   {page==='detail'&&activeProduct&&<article className="detail-view"><div className="detail-photo">{productImage(activeProduct)?<img src={productImage(activeProduct)} alt={activeProduct.title}/>:<ShoppingBag size={50}/>}</div>{(activeProduct.product_images||[]).length>1&&<div className="detail-gallery">{[...(activeProduct.product_images||[])].sort((a,b)=>a.position-b.position).map(image=>imageUrls[image.storage_path]?<img key={image.id} src={imageUrls[image.storage_path]} alt={activeProduct.title}/>:null)}</div>}<span className="eyebrow">{categories.find(c=>c.id===activeProduct.category_id)?.name||'Anúncio'}</span><h1>{activeProduct.title}</h1><strong className="detail-price">{formatKz(activeProduct.price)}</strong><p className="detail-location">{activeProduct.city||'Angola'}</p><h3>Descrição</h3><p>{activeProduct.description||'O vendedor não adicionou uma descrição.'}</p><button className="primary" onClick={()=>{const contact=activeProduct.whatsapp_phone?toWhatsAppDigits(activeProduct.whatsapp_phone):null;if(contact){const url='https://wa.me/'+contact+'?text='+encodeURIComponent('Olá! Tenho interesse no anúncio: '+activeProduct.title);window.open(url,'_blank','noopener,noreferrer');}else setNotice('O vendedor não disponibilizou WhatsApp neste anúncio.');}}>Contactar vendedor pelo WhatsApp</button></article>}
   </main>
   {bottomNav()}
  </div>;
