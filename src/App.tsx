@@ -11,6 +11,23 @@ const categoryFallback: Category[] = [
 const initialProducts: Product[] = [];
 
 type Page = 'home'|'search'|'publish'|'saved'|'profile'|'detail'|'myads';
+async function compressPhoto(file: File): Promise<Blob> {
+ const bitmap = await createImageBitmap(file);
+ const scale = Math.min(1, 1600 / Math.max(bitmap.width, bitmap.height));
+ const canvas = document.createElement('canvas');
+ canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+ canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+ const context = canvas.getContext('2d');
+ if (!context) { bitmap.close(); throw new Error('Não foi possível preparar esta fotografia.'); }
+ context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+ bitmap.close();
+ const blob = await new Promise<Blob>((resolve, reject) => {
+  canvas.toBlob(result => result ? resolve(result) : reject(new Error('Não foi possível comprimir esta fotografia.')), 'image/jpeg', 0.82);
+ });
+ if (blob.size > 5 * 1024 * 1024) throw new Error('A fotografia continua demasiado grande depois da compressão.');
+ return blob;
+}
+
 export default function App() {
  const [page,setPage] = useState<Page>('home');
  const [session,setSession] = useState<Session|null>(null);
@@ -158,10 +175,13 @@ export default function App() {
     const imageRows = [] as {product_id:string;storage_path:string;position:number}[];
     for(let i=0;i<photos.length;i++) {
      const file=photos[i];
-     const path=`${session.user.id}/${productId}/${Date.now()}-${i}.jpg`;
-     const {error:uploadError}=await supabase.storage.from('product-images').upload(path,file,{contentType:file.type,upsert:false});
-     if(uploadError) {imageFailures++;continue;}
-     imageRows.push({product_id:productId,storage_path:path,position:firstPosition+i});
+     const path = session.user.id + '/' + productId + '/' + Date.now() + '-' + i + '.jpg';
+     try {
+      const compressed = await compressPhoto(file);
+      const {error:uploadError}=await supabase.storage.from('product-images').upload(path,compressed,{contentType:'image/jpeg',upsert:false});
+      if(uploadError) {imageFailures++;continue;}
+      imageRows.push({product_id:productId,storage_path:path,position:firstPosition+i});
+     } catch { imageFailures++; }
     }
     if(imageRows.length) {const {error:imageError}=await supabase.from('product_images').insert(imageRows);if(imageError)imageFailures+=imageRows.length;}
    }
