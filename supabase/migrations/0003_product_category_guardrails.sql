@@ -5,12 +5,14 @@ language plpgsql
 set search_path = ''
 as $$
 begin
-  if not exists (
-    select 1 from public.categories c
-    where c.id = new.category_id and c.is_active = true
-  ) then
-    raise exception 'A categoria seleccionada não está disponível.'
-      using errcode = '23514';
+  if tg_op = 'INSERT' or new.status = 'active' or new.category_id is distinct from old.category_id then
+    if not exists (
+      select 1 from public.categories c
+      where c.id = new.category_id and c.is_active = true
+    ) then
+      raise exception 'A categoria seleccionada não está disponível.'
+        using errcode = '23514';
+    end if;
   end if;
   return new;
 end;
@@ -20,7 +22,6 @@ drop trigger if exists products_validate_category on public.products;
 create trigger products_validate_category
 before insert or update of category_id, status on public.products
 for each row
-when (new.status = 'active' or tg_op = 'INSERT' or new.category_id is distinct from old.category_id)
 execute function public.validate_product_category();
 
 drop policy if exists "products public active read" on public.products;
