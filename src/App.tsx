@@ -95,7 +95,7 @@ export default function App() {
  },[products,myProducts,session?.user.id,imageUrls]);
 
  async function loadPublicData() {
-  if (!supabase) { setPublicLoading(false); return; }
+  if (!supabase) { setPublicError('O marketplace ainda não está ligado ao Supabase. As listagens reais só aparecerão depois de configurar o backend.'); setPublicLoading(false); return; }
   setPublicLoading(true);
   setPublicError('');
   try {
@@ -143,19 +143,30 @@ export default function App() {
   if (!normalizedPhone) {setAuthError('Introduz um número angolano válido, por exemplo +244923456789.');return;}
   setPhone(normalizedPhone);
   setAuthBusy(true);
-  const {error} = await supabase.auth.signInWithOtp({phone:normalizedPhone});
-  setAuthBusy(false);
-  if (error) setAuthError(error.message); else setOtpSent(true);
+  try {
+   const {error} = await supabase.auth.signInWithOtp({phone:normalizedPhone});
+   if(error) setAuthError(error.message); else setOtpSent(true);
+  } catch (error) {
+   setAuthError(error instanceof Error?error.message:'Não foi possível enviar o código SMS.');
+  } finally {
+   setAuthBusy(false);
+  }
  }
  async function verifyOtp() {
   setAuthError('');
   if (!supabase) return;
   const normalizedPhone = normalizeAngolanPhone(phone);
   if (!normalizedPhone) {setAuthError('Introduz um número angolano válido, por exemplo +244923456789.');return;}
+  if (!/^\\d{6}$/.test(otp)) {setAuthError('Introduz o código de 6 dígitos recebido por SMS.');return;}
   setAuthBusy(true);
-  const {error} = await supabase.auth.verifyOtp({phone:normalizedPhone,token:otp,type:'sms'});
-  setAuthBusy(false);
-  if (error) setAuthError(error.message); else {setOtpSent(false);setOtp('');setNotice('Sessão iniciada com sucesso.');}
+  try {
+   const {error} = await supabase.auth.verifyOtp({phone:normalizedPhone,token:otp,type:'sms'});
+   if(error) setAuthError(error.message); else {setOtpSent(false);setOtp('');setNotice('Sessão iniciada com sucesso.');}
+  } catch (error) {
+   setAuthError(error instanceof Error?error.message:'Não foi possível confirmar o código SMS.');
+  } finally {
+   setAuthBusy(false);
+  }
  }
  async function signOut() { if(supabase) await supabase.auth.signOut(); setNotice('Sessão terminada.'); }
  function publicUrl(path:string) { return imageUrls[path] || ''; }
