@@ -7,8 +7,9 @@ Use a dedicated Supabase project for this marketplace. Do not reuse the database
 1. Open the SQL Editor in the dedicated project.
 2. Run `migrations/0001_marketplace_phase1.sql`.
 3. Run `migrations/0002_storage_policy_hardening.sql`.
-4. Run `seed.sql` to add categories only.
-5. Inspect the tables and RLS policies in the dashboard.
+4. Run `migrations/0003_product_category_guardrails.sql`.
+5. Run `seed.sql` to add categories only.
+6. Inspect the tables and RLS policies in the dashboard.
 
 ## Auth
 
