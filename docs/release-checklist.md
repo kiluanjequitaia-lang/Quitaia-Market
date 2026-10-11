@@ -1,35 +1,35 @@
-# Quitaia Market — release checklist
+# Quitaia Market — lista de verificação para lançamento
 
-## Repository and build
-- [x] Initial React + TypeScript + Vite app committed to `main`.
-- [x] GitHub Actions runs dependency installation, TypeScript validation, unit tests and a production build.
-- [x] Price format tested as `24.999,00 Kz`.
-- [ ] Ensure GitHub repository visibility matches the owner's intent; it is currently public.
-- [x] Commit the npm lockfile and validate it in CI.
+## Repositório e build
+- [x] Aplicação React + TypeScript + Vite enviada para a branch `main`.
+- [x] GitHub Actions executa instalação bloqueada, auditoria de dependências, TypeScript, testes unitários e build de produção.
+- [x] Formato monetário testado como `24.999,00 Kz`.
+- [x] Ficheiro `package-lock.json` guardado e validado em CI.
+- [ ] Confirmar que a visibilidade do repositório corresponde à intenção do proprietário; neste momento está público.
 
 ## Supabase
-- [ ] Choose and provision a dedicated Supabase project for Quitaia Market (do not reuse any other project).
-- [ ] Apply migrations in order and run category seed.
-- [ ] Configure phone OTP and an SMS provider that delivers to Angolan numbers.
-- [ ] Configure allowed auth redirect URLs.
-- [ ] Test RLS using two independent user accounts, including read/update attempts against another user's products and profile.
-- [ ] Confirm inactive categories cannot be used for new listings.
-- [ ] Confirm private photo bucket, signed URL expiry and access after pause/sale.
-- [ ] Review Supabase Security and Performance Advisors.
+- [ ] Criar um projecto Supabase dedicado ao Quitaia Market (não reutilizar outros projectos).
+- [ ] Aplicar as três migrações por ordem e executar o seed das categorias.
+- [ ] Configurar OTP por telefone e fornecedor SMS com entrega para números angolanos.
+- [ ] Configurar os URLs de autenticação permitidos.
+- [ ] Testar RLS com duas contas independentes, incluindo tentativas de leitura e alteração de dados de outro utilizador.
+- [ ] Confirmar que categorias inactivas não podem ser usadas em anúncios novos ou reactivados.
+- [ ] Confirmar bucket privado, expiração das URLs assinadas e acesso após pausa/remoção.
+- [ ] Rever os Security e Performance Advisors do Supabase.
 
-## Functional acceptance
-- [ ] Valid/invalid OTP, resend, logout and refresh persistence.
-- [ ] Create, edit, pause, reactivate, mark sold and soft-delete a listing.
-- [ ] Test zero, one and nine photos; reject ten, unsupported MIME types and oversized originals.
-- [ ] Confirm image compression, upload retry/error messages and cleanup of orphan files.
-- [ ] Confirm active listings appear publicly and paused/sold listings only appear in seller management.
-- [ ] Test optional WhatsApp contact via real test numbers.
-- [ ] Test responsive layout, keyboard interactions, accessibility and empty/error/loading states.
+## Aceitação funcional
+- [ ] Testar OTP válido/inválido, repetição do envio, logout e persistência após actualizar a página.
+- [ ] Criar, editar, pausar, reactivar, marcar como vendido e remover um anúncio.
+- [ ] Testar 0, 1 e 9 fotografias; rejeitar 10, tipos não suportados e originais demasiado grandes.
+- [ ] Confirmar compressão, mensagens de erro e limpeza de ficheiros que ficarem órfãos.
+- [ ] Confirmar que anúncios activos aparecem publicamente e os pausados/vendidos apenas na gestão do vendedor.
+- [ ] Testar o contacto WhatsApp opcional com números de teste reais.
+- [ ] Testar responsividade, navegação por teclado, acessibilidade e estados de carregamento/erro/vazio.
 
-## Before launch
-- [ ] Add reporting/moderation and prohibited-listing policy.
-- [x] Add preliminary privacy and terms views inside the app.
-- [ ] Publish final terms and privacy notice reviewed for Angola.
-- [ ] Confirm support contact and data deletion process.
-- [ ] Set the correct repository visibility and production domain.
-- [ ] Perform end-to-end tests against a staging Supabase project before production publication.
+## Antes do lançamento
+- [ ] Implementar denúncias de anúncios, moderação e regras para artigos proibidos.
+- [x] Adicionar ao app páginas preliminares de privacidade e termos.
+- [ ] Publicar versões finais da privacidade e dos termos revistos juridicamente em Angola.
+- [ ] Definir contacto de suporte e processo de eliminação de dados/conta.
+- [ ] Confirmar visibilidade do repositório e domínio de produção.
+- [ ] Executar testes end-to-end num projecto Supabase de staging antes da publicação final.
