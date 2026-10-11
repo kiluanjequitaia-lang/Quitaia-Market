@@ -8,7 +8,7 @@ import type { Category, Product } from './types';
 const categoryFallback: Category[] = [
  {id:'tecnologia',name:'Tecnologia',icon:'📱'}, {id:'moda',name:'Moda',icon:'👕'}, {id:'casa',name:'Casa',icon:'🏠'}, {id:'veiculos',name:'Veículos',icon:'🚗'}, {id:'imoveis',name:'Imóveis',icon:'🏢'}, {id:'servicos',name:'Serviços',icon:'🛠️'}, {id:'desporto',name:'Desporto',icon:'⚽'}, {id:'beleza',name:'Beleza',icon:'✨'}, {id:'criancas',name:'Crianças',icon:'🧸'}, {id:'outros',name:'Outros',icon:'📦'}
 ];
-const demoProducts: Product[] = [];
+const initialProducts: Product[] = [];
 
 type Page = 'home'|'search'|'publish'|'saved'|'profile'|'detail'|'myads';
 export default function App() {
@@ -20,10 +20,13 @@ export default function App() {
  const [authBusy,setAuthBusy] = useState(false);
  const [authError,setAuthError] = useState('');
  const [categories,setCategories] = useState<Category[]>(categoryFallback);
- const [products,setProducts] = useState<Product[]>(demoProducts);
+ const [products,setProducts] = useState<Product[]>(initialProducts);
  const [activeProduct,setActiveProduct] = useState<Product|null>(null);
  const [imageUrls,setImageUrls] = useState<Record<string,string>>({});
  const [editingProductId,setEditingProductId] = useState<string|null>(null);
+ const [profileName,setProfileName] = useState('');
+ const [profileCity,setProfileCity] = useState('');
+ const [profileBusy,setProfileBusy] = useState(false);
  const [search,setSearch] = useState('');
  const [categoryFilter,setCategoryFilter] = useState('');
  const [myProducts,setMyProducts] = useState<Product[]>([]);
@@ -80,8 +83,24 @@ export default function App() {
  }
  async function loadMine() {
   if (!supabase || !session?.user.id) return;
-  const {data} = await supabase.from('products').select('*,product_images(id,storage_path,position)').eq('seller_id',session.user.id).neq('status','deleted').order('created_at',{ascending:false});
-  if (data) setMyProducts(data as Product[]);
+  const [{data:ads},{data:profile}] = await Promise.all([
+   supabase.from('products').select('*,product_images(id,storage_path,position)').eq('seller_id',session.user.id).neq('status','deleted').order('created_at',{ascending:false}),
+   supabase.from('profiles').select('display_name,city').eq('id',session.user.id).maybeSingle()
+  ]);
+  if (ads) setMyProducts(ads as Product[]);
+  if (profile) { setProfileName(profile.display_name || ''); setProfileCity(profile.city || ''); }
+ }
+ async function saveProfile() {
+  if (!supabase || !session) return;
+  setProfileBusy(true);
+  try {
+   const {error} = await supabase.from('profiles').upsert({id:session.user.id,display_name:profileName.trim()||null,city:profileCity.trim()||null},{onConflict:'id'});
+   if (error) setNotice(error.message); else setNotice('Perfil actualizado.');
+  } catch (error) {
+   setNotice(error instanceof Error?error.message:'Não foi possível guardar o perfil.');
+  } finally {
+   setProfileBusy(false);
+  }
  }
  async function sendOtp() {
   setAuthError('');
@@ -176,9 +195,9 @@ export default function App() {
    {page==='search'&&<><div className="searchbox large"><Search size={19}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Pesquisar anúncios" autoFocus/><button onClick={()=>{setSearch('');setCategoryFilter('')}}><X size={17}/></button></div><div className="filter-chips">{categories.map(c=><button key={c.id} className={categoryFilter===c.id?'chip selected':'chip'} onClick={()=>setCategoryFilter(categoryFilter===c.id?'':c.id)}>{c.name}</button>)}</div><div className="section-heading"><h2>{filtered.length} anúncios</h2></div>{filtered.length?<div className="product-grid">{filtered.map(productCard)}</div>:<div className="empty-state"><Search size={28}/><h3>Nenhum resultado</h3><p>Experimenta outra palavra ou categoria.</p></div>}</>}
    {page==='publish'&&<><div className="form-intro"><span className="eyebrow">Vende de forma simples</span><h1>{editingProductId?'Editar anúncio':'Publicar anúncio'}</h1><p>Apresenta o teu produto com clareza. Fotografias reais ajudam as pessoas a decidir.</p></div>{!session?authPanel():<section className="ad-form"><label>Título do anúncio *</label><input value={title} onChange={e=>setTitle(e.target.value)} maxLength={100} placeholder="Ex.: Samsung Galaxy S24"/><label>Preço (Kz) *</label><input type="number" min="1" value={price} onChange={e=>setPrice(e.target.value)} placeholder="24999"/><label>Categoria *</label><select value={categoryId} onChange={e=>setCategoryId(e.target.value)}>{categories.map(c=><option value={c.id} key={c.id}>{c.name}</option>)}</select><label>Descrição</label><textarea value={description} onChange={e=>setDescription(e.target.value)} rows={4} maxLength={3000} placeholder="Estado, características, condições de venda..."/><label>Localização</label><input value={city} onChange={e=>setCity(e.target.value)} placeholder="Cidade ou província"/><label>Fotografias (máximo 9)</label><label className="upload-box"><ImagePlus size={24}/><strong>Adicionar fotografias</strong><small>JPG, PNG ou WebP; até 9 imagens</small><input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e=>setPhotos(Array.from(e.target.files||[]).slice(0,9))} hidden/></label>{photos.length>0&&<p className="hint">{photos.length} fotografia(s) seleccionada(s).</p>}<button className="primary" disabled={busy} onClick={()=>void publishAd()}>{busy?<LoaderCircle className="spin"/>:editingProductId?'Guardar alterações':'Publicar anúncio'}</button>{editingProductId&&<button className="text-button" onClick={()=>{setEditingProductId(null);setTitle('');setDescription('');setPrice('');setPhotos([])}}>Cancelar edição</button>}<p className="hint"><ShieldCheck size={14}/> Ao publicar, confirmas que tens direito de vender este artigo.</p></section>}</>}
    {page==='saved'&&<>{saved.length?<div className="product-grid">{products.filter(p=>saved.includes(p.id)).map(productCard)}</div>:<div className="empty-state"><Heart size={28}/><h3>Os teus guardados</h3><p>Guarda anúncios que te interessam para os encontrares facilmente.</p><button className="primary compact" onClick={()=>setPage('home')}>Explorar anúncios</button></div>}</>}
-   {page==='profile'&&<>{session?<><div className="profile-card"><div className="profile-avatar"><CircleUserRound size={34}/></div><h2>A tua conta</h2><p>{session.user.phone||session.user.email}</p><span className="verified"><ShieldCheck size={14}/> Conta autenticada</span></div><div className="profile-menu"><button onClick={()=>{setPage('myads');void loadMine()}}><Tag/> Os meus anúncios <ChevronRight/></button><button onClick={()=>setNotice('A gestão de perfil será detalhada numa próxima fase.')}><CircleUserRound/> Dados do perfil <ChevronRight/></button><button onClick={()=>setNotice('As notificações serão activadas numa fase posterior.')}><Bell/> Notificações <ChevronRight/></button><button onClick={()=>void signOut()}><LogOut/> Terminar sessão <ChevronRight/></button></div></>:authPanel()}</>}
+   {page==='profile'&&<>{session?<><div className="profile-card"><div className="profile-avatar"><CircleUserRound size={34}/></div><h2>{profileName.trim()||'A tua conta'}</h2><p>{session.user.phone||session.user.email}</p><span className="verified"><ShieldCheck size={14}/> Conta autenticada</span></div><section className="ad-form profile-form"><label>Nome a apresentar</label><input value={profileName} onChange={e=>setProfileName(e.target.value)} maxLength={80} placeholder="O teu nome"/><label>Cidade ou província</label><input value={profileCity} onChange={e=>setProfileCity(e.target.value)} maxLength={100} placeholder="Ex.: Luanda"/><button className="primary" onClick={()=>void saveProfile()} disabled={profileBusy}>{profileBusy?<LoaderCircle className="spin"/>:'Guardar perfil'}</button></section><div className="profile-menu"><button onClick={()=>{setPage('myads');void loadMine()}}><Tag/> Os meus anúncios <ChevronRight/></button><button onClick={()=>setNotice('A gestão de perfil será detalhada numa próxima fase.')}><CircleUserRound/> Dados do perfil <ChevronRight/></button><button onClick={()=>setNotice('As notificações serão activadas numa fase posterior.')}><Bell/> Notificações <ChevronRight/></button><button onClick={()=>void signOut()}><LogOut/> Terminar sessão <ChevronRight/></button></div></>:authPanel()}</>}
    {page==='myads'&&<><div className="section-heading"><h2>Os meus anúncios</h2><button className="subtle-link" onClick={()=>setPage('publish')}><Plus size={16}/> Novo</button></div>{myProducts.length?myProducts.map(p=><div className="my-ad" key={p.id}><div className="my-ad-photo">{productImage(p)?<img src={productImage(p)} alt=""/>:<ShoppingBag/>}</div><div className="my-ad-info"><strong>{p.title}</strong><b>{formatKz(p.price)}</b><small>Estado: {p.status}</small><div className="ad-actions">{p.status!=='active'&&p.status!=='sold'&&<button onClick={()=>void setProductStatus(p,'active')}>Activar</button>}<button onClick={()=>{setEditingProductId(p.id);setTitle(p.title);setDescription(p.description||'');setPrice(String(p.price));setCity(p.city||'');setCategoryId(p.category_id);setPhotos([]);setPage('publish')}}>Editar</button>{p.status==='active'&&<button onClick={()=>void setProductStatus(p,'paused')}>Pausar</button>}{p.status!=='sold'&&<button onClick={()=>void setProductStatus(p,'sold')}>Vendido</button>}<button onClick={()=>void deleteProduct(p)}>Remover</button></div></div></div>):<div className="empty-state"><ShoppingBag size={28}/><h3>Ainda não tens anúncios</h3><p>Quando publicares, poderás geri-los aqui.</p><button className="primary compact" onClick={()=>setPage('publish')}>Publicar anúncio</button></div>}</>}
-   {page==='detail'&&activeProduct&&<article className="detail-view"><div className="detail-photo">{productImage(activeProduct)?<img src={productImage(activeProduct)} alt={activeProduct.title}/>:<ShoppingBag size={50}/>}</div><span className="eyebrow">{categories.find(c=>c.id===activeProduct.category_id)?.name||'Anúncio'}</span><h1>{activeProduct.title}</h1><strong className="detail-price">{formatKz(activeProduct.price)}</strong><p className="detail-location">{activeProduct.city||'Angola'}</p><h3>Descrição</h3><p>{activeProduct.description||'O vendedor não adicionou uma descrição.'}</p><button className="primary" onClick={()=>setNotice('A comunicação entre comprador e vendedor será disponibilizada numa próxima fase.')}>Contactar vendedor</button></article>}
+   {page==='detail'&&activeProduct&&<article className="detail-view"><div className="detail-photo">{productImage(activeProduct)?<img src={productImage(activeProduct)} alt={activeProduct.title}/>:<ShoppingBag size={50}/>}</div>{(activeProduct.product_images||[]).length>1&&<div className="detail-gallery">{[...(activeProduct.product_images||[])].sort((a,b)=>a.position-b.position).map(image=>imageUrls[image.storage_path]?<img key={image.id} src={imageUrls[image.storage_path]} alt={activeProduct.title}/>:null)}</div>}<span className="eyebrow">{categories.find(c=>c.id===activeProduct.category_id)?.name||'Anúncio'}</span><h1>{activeProduct.title}</h1><strong className="detail-price">{formatKz(activeProduct.price)}</strong><p className="detail-location">{activeProduct.city||'Angola'}</p><h3>Descrição</h3><p>{activeProduct.description||'O vendedor não adicionou uma descrição.'}</p><button className="primary" onClick={()=>setNotice('A comunicação entre comprador e vendedor será disponibilizada numa próxima fase.')}>Contactar vendedor</button></article>}
   </main>
   {bottomNav()}
  </div>;
