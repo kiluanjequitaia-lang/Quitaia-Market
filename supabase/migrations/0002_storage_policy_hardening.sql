@@ -1,3 +1,7 @@
+-- Public category reads are required for visitors browsing without an account.
+drop policy if exists "categories visible" on public.categories;
+create policy "categories visible" on public.categories for select to anon, authenticated using (is_active = true);
+
 -- Use a private bucket: public object URLs would bypass row-level access policies.
 update storage.buckets set public = false where id = 'product-images';
 drop policy if exists "Public read product images" on storage.objects;
