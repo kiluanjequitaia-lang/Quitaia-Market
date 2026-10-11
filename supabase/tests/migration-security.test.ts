@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 const migration1 = readFileSync(new URL('../migrations/0001_marketplace_phase1.sql', import.meta.url), 'utf8');
 const migration2 = readFileSync(new URL('../migrations/0002_storage_policy_hardening.sql', import.meta.url), 'utf8');
 const migration3 = readFileSync(new URL('../migrations/0003_product_category_guardrails.sql', import.meta.url), 'utf8');
+const migration4 = readFileSync(new URL('../migrations/0004_product_reports.sql', import.meta.url), 'utf8');
 const seed = readFileSync(new URL('../seed.sql', import.meta.url), 'utf8');
 
 describe('Supabase migration safety invariants', () => {
@@ -29,6 +30,14 @@ describe('Supabase migration safety invariants', () => {
     expect(migration3).toContain('products_validate_category');
     expect(migration3).toContain("new.status = 'active'");
     expect(migration3).toContain("where c.id = category_id and c.is_active = true");
+  });
+
+  it('keeps reports private and only allows reports of active listings by other users', () => {
+    expect(migration4).toContain('alter table public.product_reports enable row level security');
+    expect(migration4).toContain('auth.uid() = reporter_id');
+    expect(migration4).toContain("p.status = 'active'");
+    expect(migration4).toContain('p.seller_id <> auth.uid()');
+    expect(migration4).not.toContain('for select to anon');
   });
 
   it('seeds categories only, never fictitious product listings', () => {
