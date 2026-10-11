@@ -27,7 +27,8 @@
 - [ ] Testar responsividade, navegação por teclado, acessibilidade e estados de carregamento/erro/vazio.
 
 ## Antes do lançamento
-- [ ] Implementar denúncias de anúncios, moderação e regras para artigos proibidos.
+- [x] Implementar formulário de denúncia e tabela privada com RLS.
+- [ ] Construir fila administrativa de moderação, bloqueio de vendedores e regras operacionais para artigos proibidos.
 - [x] Adicionar ao app páginas preliminares de privacidade e termos.
 - [ ] Publicar versões finais da privacidade e dos termos revistos juridicamente em Angola.
 - [ ] Definir contacto de suporte e processo de eliminação de dados/conta.
