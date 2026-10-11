@@ -270,8 +270,25 @@ export default function App() {
  }
  async function deleteProduct(product:Product) {
   if(!supabase || !session)return;
-  const {error}=await supabase.from('products').update({status:'deleted'}).eq('id',product.id).eq('seller_id',session.user.id);
-  if(error)setNotice(error.message);else {await loadMine();await loadPublicData();setNotice('Anúncio removido.');}
+  try {
+   const {data:images,error:imagesError}=await supabase.from('product_images').select('storage_path').eq('product_id',product.id);
+   if(imagesError) {setNotice('Não foi possível preparar a remoção segura das fotografias: '+imagesError.message);return;}
+   const {error:productError}=await supabase.from('products').update({status:'deleted'}).eq('id',product.id).eq('seller_id',session.user.id);
+   if(productError) {setNotice(productError.message);return;}
+   const {error:rowsError}=await supabase.from('product_images').delete().eq('product_id',product.id);
+   if(rowsError) {setNotice('Anúncio ocultado, mas não foi possível remover a galeria da base de dados: '+rowsError.message);await loadMine();await loadPublicData();return;}
+   const paths=(images||[]).map(image=>image.storage_path as string);
+   let storageWarning='';
+   if(paths.length) {
+    const {error:storageError}=await supabase.storage.from('product-images').remove(paths);
+    if(storageError) storageWarning=' As fotografias foram removidas da galeria, mas alguns ficheiros privados precisam de limpeza posterior.';
+   }
+   await loadMine();
+   await loadPublicData();
+   setNotice('Anúncio removido.'+storageWarning);
+  } catch(error) {
+   setNotice(error instanceof Error?error.message:'Não foi possível remover o anúncio.');
+  }
  }
  const filtered = useMemo(()=>products.filter(p=>(!search || p.title.toLowerCase().includes(search.toLowerCase())) && (!categoryFilter||p.category_id===categoryFilter)),[products,search,categoryFilter]);
  function productImage(p:Product) { const imgs=[...(p.product_images||[])].sort((a,b)=>a.position-b.position);return imgs[0]&&supabase?publicUrl(imgs[0].storage_path):''; }
